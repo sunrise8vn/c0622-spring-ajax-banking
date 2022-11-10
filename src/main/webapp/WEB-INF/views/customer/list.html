@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>Index</title>
+    <th:block th:replace="layout/head :: head" />
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="row">
+            <div class="col-sm-5">
+                <h1>List of customers</h1>
+            </div>
+            <div class="col-sm-7">
+                <button id="btnShowCreateModal" class="btn btn-outline-light">
+                    <i class="fa fa-plus-square-o" aria-hidden="true"></i>
+                    <span>Add New Customer</span>
+                </button>
+                <a href="/transfers" class="btn btn-outline-light"><i class="fa fa-history" aria-hidden="true"></i> <span>Transfer money Information</span></a>
+            </div>
+        </div>
+    </header>
+
+    <div class="content">
+
+        <table class="table table-hover" id="tbCustomer">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Balance</th>
+                <th>Address</th>
+                <th colspan="4">Action</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+
+    <footer id="footer">
+
+    </footer>
+</div>
+
+
+<!-- Modal Create Customer -->
+<th:block th:replace="customer/modalCreateCustomer :: modalCreateCustomer" />
+
+<!-- Modal Update Customer -->
+<th:block th:replace="customer/modalUpdateCustomer :: modalUpdateCustomer" />
+
+
+<th:block th:replace="layout/script :: script" />
+
+<script src="/assets/js/app.js"></script>
+
+<script>
+
+    const page = {
+        urls: {
+            getAllCustomers: App.CUSTOMER_API + "?deleted=0",
+            getCustomerById: App.CUSTOMER_API,
+            createCustomer: App.CUSTOMER_API,
+            updateCustomer: App.CUSTOMER_API
+        },
+        elements: {},
+        loadData: {},
+        commands: {},
+        dialogs: {
+            elements: {},
+            loadData: {},
+            commands: {},
+            alertDanger: {}
+        },
+        inintializeEventControl: {}
+    }
+
+    page.elements.btnShowCreateModal = $("#btnShowCreateModal");
+    page.elements.tbCustomer = $("#tbCustomer");
+    page.elements.tbCustomerBody = $("#tbCustomer tbody");
+
+    page.dialogs.elements.modalCreateCustomer = $("#modalCreateCustomer");
+    page.dialogs.elements.frmCreateCustomer = $("#frmCreateCustomer");
+    page.dialogs.elements.customerIdCre = $("#customerIdCre");
+    page.dialogs.elements.fullNameCre = $("#fullNameCre");
+    page.dialogs.elements.emailCre = $("#emailCre");
+    page.dialogs.elements.phoneCre = $("#phoneCre");
+    page.dialogs.elements.addressCre = $("#addressCre");
+    page.dialogs.elements.btnCreate = $("#btnCreate");
+
+    page.dialogs.elements.modalUpdateCustomer = $("#modalUpdateCustomer");
+    page.dialogs.elements.frmUpdateCustomer = $("#frmUpdateCustomer");
+    page.dialogs.elements.customerIdUp = $("#customerIdUp");
+    page.dialogs.elements.fullNameUp = $("#fullNameUp");
+    page.dialogs.elements.emailUp = $("#emailUp");
+    page.dialogs.elements.phoneUp = $("#phoneUp");
+    page.dialogs.elements.addressUp = $("#addressUp");
+    page.dialogs.elements.btnUpdate = $("#btnUpdate");
+
+    page.dialogs.alertDanger.modalCreate = $("#modalCreateCustomer .modal-body .modal-alert-danger");
+    page.dialogs.alertDanger.modalUpdate = $("#modalUpdateCustomer .modal-body .modal-alert-danger");
+
+
+    let customer = new Customer();
+
+
+    page.commands.getAllCustomers = () => {
+        $.ajax({
+            headers: {
+                "accept": "application/json",
+                "content-type": "application/json"
+            },
+            type: "GET",
+            url: page.urls.getAllCustomers
+        })
+            .done((data) => {
+
+                $.each(data, (i, item) => {
+                    let str = renderCustomer(item);
+
+                    page.elements.tbCustomerBody.prepend(str);
+                })
+
+                page.commands.handleShowUpdateModal();
+            })
+            .fail((error) => {
+                console.error(error);
+            })
+    }
+
+
+    page.commands.getCustomerById = (customerId) => {
+        return $.ajax({
+            type: "GET",
+            url: page.urls.getCustomerById + "/" + customerId
+        })
+            .done((data) => {
+                // customer = data;
+            })
+            .fail((error) => {
+                console.error(error);
+            })
+    }
+
+
+    function renderCustomer(obj) {
+        return `
+                <tr id="tr_${obj.id}">
+                    <td>${obj.id}</td>
+                    <td>${obj.fullName}</td>
+                    <td>${obj.email}</td>
+                    <td>${obj.phone}</td>
+                    <td>${obj.balance}</td>
+                    <td>${obj.address}</td>
+                    <td>
+                        <button class="btn btn-outline-secondary update" data-id="${obj.id}">
+                            <i class="fa fa-plus" aria-hidden="true"></i>
+                            Update
+                        </button>
+                    </td>
+                    <td>
+                        <a href="/customers/deposit/1">
+                            <button class="btn btn-outline-success">
+                                <i class="fa fa-plus" aria-hidden="true"></i>
+                                Deposit
+                            </button>
+                        </a>
+                    </td>
+                    <td>
+                        <a href="/customers/transfer/1">
+                            <button class="btn btn-outline-primary">
+                                <i class="fa fa-exchange" aria-hidden="true"></i>
+                                Transfer
+                            </button>
+                        </a>
+                    </td>
+                    <td>
+                        <a href="/customers/delete/1">
+                            <button class="btn btn-outline-danger">
+                                <i class="fa fa-trash" aria-hidden="true"></i>
+                                Delete
+                            </button>
+                        </a>
+                    </td>
+                </tr>
+            `;
+    }
+
+
+    page.commands.createCustomer = () => {
+        customer.fullName = page.dialogs.elements.fullNameCre.val();
+        customer.email = page.dialogs.elements.emailCre.val();
+        customer.phone = page.dialogs.elements.phoneCre.val();
+        customer.address = page.dialogs.elements.addressCre.val();
+        customer.balance = 0;
+        customer.deleted = 0;
+
+        $.ajax({
+            headers: {
+                "accept": "application/json",
+                "content-type": "application/json"
+            },
+            type: "POST",
+            url: page.urls.createCustomer,
+            data: JSON.stringify(customer)
+        })
+            .done((data) => {
+                let str = renderCustomer(data);
+
+                page.elements.tbCustomerBody.prepend(str);
+
+                page.dialogs.elements.modalCreateCustomer.modal("hide");
+
+                removeEventShowUpdateModal();
+
+                page.commands.handleShowUpdateModal();
+            })
+            .fail((error) => {
+                console.error(error);
+            })
+    }
+
+
+    page.commands.updateCustomer = (obj) => {
+        $.ajax({
+            headers: {
+                "accept": "application/json",
+                "content-type": "application/json"
+            },
+            type: "PATCH",
+            url: page.urls.updateCustomer + "/" + obj.id,
+            data: JSON.stringify(obj)
+        })
+            .done((data) => {
+
+                let str = renderCustomer(data);
+
+                $("#tr_" + obj.id).replaceWith(str);
+
+                page.dialogs.elements.modalUpdateCustomer.modal("hide");
+
+                removeEventShowUpdateModal();
+
+                page.commands.handleShowUpdateModal();
+            })
+            .fail((error) => {
+                console.error(error);
+            })
+    }
+
+    page.dialogs.elements.btnCreate.on("click", () => {
+        page.dialogs.elements.frmCreateCustomer.trigger("submit");
+    })
+
+
+    page.dialogs.elements.btnUpdate.on("click", () => {
+        customer.id = page.dialogs.elements.customerIdUp.val();
+        customer.fullName = page.dialogs.elements.fullNameUp.val();
+        customer.email = page.dialogs.elements.emailUp.val();
+        customer.phone = page.dialogs.elements.phoneUp.val();
+        customer.address = page.dialogs.elements.addressUp.val();
+
+        page.commands.updateCustomer(customer);
+    })
+
+    page.commands.handleShowCreateModal = () => {
+        page.elements.btnShowCreateModal.on("click", () => {
+            page.dialogs.elements.modalCreateCustomer.modal("show");
+        })
+    }
+
+    page.commands.handleShowUpdateModal = () => {
+        $(".update").on("click", function () {
+            let id = $(this).data("id");
+
+            page.commands.getCustomerById(id).then((data) => {
+                page.dialogs.elements.customerIdUp.val(id);
+                page.dialogs.elements.fullNameUp.val(data.fullName);
+                page.dialogs.elements.emailUp.val(data.email);
+                page.dialogs.elements.phoneUp.val(data.phone);
+                page.dialogs.elements.addressUp.val(data.address);
+
+                page.dialogs.elements.modalUpdateCustomer.modal("show");
+            })
+                .catch(() => {
+                    alert("ID not valid");
+                });
+        })
+    }
+
+
+    page.dialogs.commands.handleCloseCreateModal = () => {
+        // page.elements.currentRow.val("");
+        page.dialogs.alertDanger.modalCreate.empty().removeClass("show").addClass("hide");
+        page.dialogs.elements.frmCreateCustomer.find("input.error").removeClass("error");
+        page.dialogs.elements.frmCreateCustomer[0].reset();
+        page.dialogs.elements.frmCreateCustomer.validate().resetForm();
+    }
+
+    function removeEventShowUpdateModal() {
+        $(".update").off();
+    }
+
+    page.dialogs.elements.frmCreateCustomer.validate({
+        rules: {
+            fullNameCre: {
+                required: true,
+                minlength: 3,
+                maxlength: 25
+            },
+            emailCre: {
+                required: true
+            }
+        },
+        messages: {
+            fullNameCre: {
+                required: "Họ tên là bắt buộc",
+                minlength: "Họ tên có độ dài tối thiếu là 3 ký tự",
+                maxlength: "Họ tên có độ dài tối đa là 25 ký tự"
+            },
+            emailCre: {
+                required: "Email là bắt buộc"
+            }
+        },
+        errorLabelContainer: "#modalCreateCustomer .modal-alert-danger",
+        errorPlacement: function (error, element) {
+            error.appendTo("#modalCreateCustomer .modal-alert-danger");
+        },
+        showErrors: function(errorMap, errorList) {
+            if (this.numberOfInvalids() > 0) {
+                $("#modalCreateCustomer .modal-alert-danger").removeClass("hide").addClass("show");
+            } else {
+                $("#modalCreateCustomer .modal-alert-danger").removeClass("show").addClass("hide").empty();
+                $("#frmCreateCustomer input.error").removeClass("error");
+            }
+            this.defaultShowErrors();
+        },
+        submitHandler: function () {
+            page.commands.createCustomer();
+        }
+    })
+
+
+    page.commands.loadData = () => {
+        page.commands.getAllCustomers();
+    }
+
+    page.inintializeEventControl = () => {
+        page.commands.handleShowCreateModal();
+
+        page.dialogs.elements.modalCreateCustomer.on("hidden.bs.modal", function () {
+            page.dialogs.commands.handleCloseCreateModal();
+        });
+    }
+
+
+    $(() => {
+        page.commands.loadData();
+
+        page.inintializeEventControl();
+    });
+
+</script>
+</body>
+</html>
