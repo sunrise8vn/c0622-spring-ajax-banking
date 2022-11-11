@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -19,6 +20,18 @@ public class CustomerAPI {
 
     @Autowired
     private ICustomerService customerService;
+
+    @GetMapping
+    public ResponseEntity<List<Customer>> getAllCustomers() {
+
+        List<Customer> customers = customerService.findAll();
+
+        if (customers.size() == 0) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(customers, HttpStatus.OK);
+    }
 
     @GetMapping("/{customerId}")
     public ResponseEntity<Customer> create(@PathVariable Long customerId) {

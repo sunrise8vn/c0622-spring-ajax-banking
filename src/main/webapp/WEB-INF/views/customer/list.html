@@ -53,6 +53,9 @@
 <!-- Modal Update Customer -->
 <th:block th:replace="customer/modalUpdateCustomer :: modalUpdateCustomer" />
 
+<!-- Modal Deposit -->
+<th:block th:replace="customer/modalDeposit :: modalDeposit" />
+
 
 <th:block th:replace="layout/script :: script" />
 
@@ -65,7 +68,8 @@
             getAllCustomers: App.CUSTOMER_API + "?deleted=0",
             getCustomerById: App.CUSTOMER_API,
             createCustomer: App.CUSTOMER_API,
-            updateCustomer: App.CUSTOMER_API
+            updateCustomer: App.CUSTOMER_API,
+            doDeposit: App.DEPOSIT_API,
         },
         elements: {},
         loadData: {},
@@ -101,11 +105,21 @@
     page.dialogs.elements.addressUp = $("#addressUp");
     page.dialogs.elements.btnUpdate = $("#btnUpdate");
 
+    page.dialogs.elements.modalDeposit = $("#modalDeposit");
+    page.dialogs.elements.frmDeposit = $("#frmDeposit");
+    page.dialogs.elements.customerIdDep = $("#customerIdDep");
+    page.dialogs.elements.fullNameDep = $("#fullNameDep");
+    page.dialogs.elements.balanceDep = $("#balanceDep");
+    page.dialogs.elements.transactionAmountDep = $("#transactionAmountDep");
+    page.dialogs.elements.btnDeposit = $("#btnDeposit");
+
     page.dialogs.alertDanger.modalCreate = $("#modalCreateCustomer .modal-body .modal-alert-danger");
     page.dialogs.alertDanger.modalUpdate = $("#modalUpdateCustomer .modal-body .modal-alert-danger");
+    page.dialogs.alertDanger.modalDeposit = $("#modalDeposit .modal-body .modal-alert-danger");
 
 
     let customer = new Customer();
+    let deposit = new Deposit();
 
 
     page.commands.getAllCustomers = () => {
@@ -126,6 +140,8 @@
                 })
 
                 page.commands.handleShowUpdateModal();
+
+                page.commands.handleShowDepositModal();
             })
             .fail((error) => {
                 console.error(error);
@@ -139,7 +155,7 @@
             url: page.urls.getCustomerById + "/" + customerId
         })
             .done((data) => {
-                // customer = data;
+                customer = data;
             })
             .fail((error) => {
                 console.error(error);
@@ -163,12 +179,10 @@
                         </button>
                     </td>
                     <td>
-                        <a href="/customers/deposit/1">
-                            <button class="btn btn-outline-success">
-                                <i class="fa fa-plus" aria-hidden="true"></i>
-                                Deposit
-                            </button>
-                        </a>
+                        <button class="btn btn-outline-success deposit" data-id="${obj.id}">
+                            <i class="fa fa-plus" aria-hidden="true"></i>
+                            Deposit
+                        </button>
                     </td>
                     <td>
                         <a href="/customers/transfer/1">
@@ -252,10 +266,50 @@
             })
     }
 
+    page.commands.deposit = () => {
+        deposit.transactionAmount = page.dialogs.elements.transactionAmountDep.val();
+        deposit.customerId = page.dialogs.elements.customerIdDep.val();
+
+        $.ajax({
+            headers: {
+                "accept": "application/json",
+                "content-type": "application/json"
+            },
+            type: "POST",
+            url: page.urls.doDeposit,
+            data: JSON.stringify(deposit)
+        })
+            .done((data) => {
+                // let str = renderCustomer(data);
+
+                // page.elements.tbCustomerBody.prepend(str);
+
+                page.dialogs.elements.modalDeposit.modal("hide");
+
+                // removeEventShowUpdateModal();
+
+                // page.commands.handleShowUpdateModal();
+            })
+            .fail((jqXHR) => {
+                let errors = jqXHR.responseJSON;
+
+                if (errors) {
+                    let str = "";
+                    $.each(errors, (k, v) => {
+                        str += `
+                            <li><label for="${k + 'Dep'}">${v}</label></li>
+                        `;
+                    })
+
+                    page.dialogs.alertDanger.modalDeposit.append(str);
+                }
+            })
+    }
+
+
     page.dialogs.elements.btnCreate.on("click", () => {
         page.dialogs.elements.frmCreateCustomer.trigger("submit");
     })
-
 
     page.dialogs.elements.btnUpdate.on("click", () => {
         customer.id = page.dialogs.elements.customerIdUp.val();
@@ -266,6 +320,11 @@
 
         page.commands.updateCustomer(customer);
     })
+
+    page.dialogs.elements.btnDeposit.on("click", () => {
+        page.commands.deposit();
+    })
+
 
     page.commands.handleShowCreateModal = () => {
         page.elements.btnShowCreateModal.on("click", () => {
@@ -292,6 +351,22 @@
         })
     }
 
+
+    page.commands.handleShowDepositModal = () => {
+        $(".deposit").on("click", function () {
+            let customerId = $(this).data("id");
+
+            page.commands.getCustomerById(customerId).then(() => {
+                page.dialogs.elements.customerIdDep.val(customer.id);
+                page.dialogs.elements.fullNameDep.val(customer.fullName);
+                page.dialogs.elements.balanceDep.val(customer.balance);
+                page.dialogs.elements.modalDeposit.modal("show");
+            })
+            .catch(() => {
+                alert("Customer ID not valid");
+            })
+        })
+    }
 
     page.dialogs.commands.handleCloseCreateModal = () => {
         // page.elements.currentRow.val("");
@@ -349,7 +424,7 @@
         page.commands.getAllCustomers();
     }
 
-    page.inintializeEventControl = () => {
+    page.initializeEventControl = () => {
         page.commands.handleShowCreateModal();
 
         page.dialogs.elements.modalCreateCustomer.on("hidden.bs.modal", function () {
@@ -361,7 +436,7 @@
     $(() => {
         page.commands.loadData();
 
-        page.inintializeEventControl();
+        page.initializeEventControl();
     });
 
 </script>
